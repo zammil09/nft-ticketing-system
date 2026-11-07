@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام التذاكر اللامركزي</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;700&family=Tajawal:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@4.11.1/dist/web3.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <button id="back-btn" class="back-btn hidden" title="رجوع">⟵</button>
+      <span class="brand-mark">🎫</span>
+      <div>
+        <h1>نظام التذاكر اللامركزي</h1>
+        <p class="brand-sub">Admit One — موثّقة على السلسلة</p>
+      </div>
+    </div>
+    <div id="wallet-box">
+      <span id="wallet-address">غير متصل</span>
+      <button id="connect-btn">ربط المحفظة</button>
+    </div>
+  </header>
+
+  <!-- ===== نموذج الملف الشخصي (مرة واحدة بعد أول اتصال) ===== -->
+  <section id="profile-setup" class="card booth hidden">
+    <p class="eyebrow">قبل ما نبدأ</p>
+    <h2>عرّفنا بنفسك</h2>
+    <form id="profile-form">
+      <label>الاسم <input type="text" id="profile-name" required placeholder="مثال: محمد أحمد" /></label>
+      <label>البريد الإلكتروني <input type="email" id="profile-email" required placeholder="example@email.com" /></label>
+      <button type="submit">حفظ ومتابعة</button>
+    </form>
+  </section>
+
+  <!-- ===== اختيار الدور ===== -->
+  <section id="role-select" class="card booth hidden">
+    <p class="eyebrow">شباك التذاكر</p>
+    <h2>مين الواقف على الشباك؟</h2>
+    <div class="booth-options">
+      <button id="role-user-btn" class="booth-btn">
+        <span class="booth-btn-title">حاضر الفعالية</span>
+        <span class="booth-btn-sub">تصفح، اشترِ، أو بيع تذكرتك</span>
+      </button>
+      <button id="role-owner-btn" class="booth-btn">
+        <span class="booth-btn-title">منظّم الفعالية</span>
+        <span class="booth-btn-sub">أنشئ فعاليتك وتابع المبيعات</span>
+      </button>
+    </div>
+  </section>
+
+  <main id="app" class="hidden">
+
+    <nav id="nav-user" class="hidden">
+      <button data-view="browse"><span class="nav-icon">🎫</span><span class="nav-label">تصفح الفعاليات</span></button>
+      <button data-view="my-tickets"><span class="nav-icon">🎟️</span><span class="nav-label">تذاكري</span></button>
+      <button data-view="marketplace"><span class="nav-icon">🔁</span><span class="nav-label">سوق إعادة البيع</span></button>
+    </nav>
+
+    <nav id="nav-owner" class="hidden">
+      <button data-view="create-event"><span class="nav-icon">➕</span><span class="nav-label">إنشاء فعالية</span></button>
+      <button data-view="my-events"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+      <button data-view="checkin"><span class="nav-icon">📷</span><span class="nav-label">بوابة الدخول</span></button>
+    </nav>
+
+    <!-- ===== USER: تصفح الفعاليات ===== -->
+    <section id="view-browse" class="view hidden card">
+      <p class="eyebrow">لوحة الفعاليات</p>
+      <h2>الفعاليات المتاحة</h2>
+      <div class="faucet-row">
+        <button id="faucet-btn">احصل على mUSDC تجريبي</button>
+        <span id="usdc-balance"></span>
+      </div>
+      <div id="events-list" class="grid"></div>
+    </section>
+
+    <!-- ===== USER: تذاكري ===== -->
+    <section id="view-my-tickets" class="view hidden card">
+      <p class="eyebrow">محفظة التذاكر</p>
+      <h2>تذاكري</h2>
+      <div id="tickets-list" class="grid"></div>
+    </section>
+
+    <!-- ===== USER: سوق إعادة البيع ===== -->
+    <section id="view-marketplace" class="view hidden card">
+      <p class="eyebrow">إعادة بيع خاضعة لحد سعري بالعقد الذكي</p>
+      <h2>سوق إعادة البيع</h2>
+      <div id="resale-list" class="grid"></div>
+    </section>
+
+    <!-- ===== OWNER: إنشاء فعالية ===== -->
+    <section id="view-create-event" class="view hidden card">
+      <p class="eyebrow">طباعة تذكرة جديدة</p>
+      <h2>إنشاء فعالية</h2>
+      <form id="create-event-form">
+        <label>اسم الفعالية <input type="text" id="ev-name" required placeholder="New Year's Party" /></label>
+        <label>السعر (USDC) <input type="number" id="ev-price" required min="0" step="0.01" /></label>
+        <label>عدد التذاكر <input type="number" id="ev-max" required min="1" step="1" /></label>
+        <label>
+          حد إعادة البيع (% من السعر الأصلي)
+          <input type="number" id="ev-resale-cap" required min="0" step="1" value="110" />
+        </label>
+        <p class="hint">مثال: 110 = يُسمح بإعادة البيع حتى 10% زيادة فقط. 100 = بدون أي ربح. 0 = منع إعادة البيع كلياً.</p>
+        <button type="submit">نشر الفعالية على السلسلة</button>
+      </form>
+    </section>
+
+    <!-- ===== OWNER: Dashboard ===== -->
+    <section id="view-my-events" class="view hidden card">
+      <p class="eyebrow">دفتر الحسابات</p>
+      <h2>فعالياتي</h2>
+      <div id="my-events-list" class="ledger"></div>
+    </section>
+
+    <!-- ===== OWNER: بوابة الدخول ===== -->
+    <section id="view-checkin" class="view hidden card">
+      <p class="eyebrow">بوابة الدخول</p>
+      <h2>تسجيل الدخول (Check-in)</h2>
+      <div id="checkin-result" class="checkin-result"></div>
+      <div class="checkin-actions">
+        <button id="scan-start-btn">📷 تشغيل الكاميرا ومسح QR</button>
+        <button id="scan-stop-btn" class="secondary hidden">إيقاف الكاميرا</button>
+      </div>
+      <div id="qr-reader"></div>
+      <p class="eyebrow" style="margin-top:18px;">أو أدخل رقم التذكرة يدوياً</p>
+      <form id="manual-checkin-form" class="manual-checkin">
+        <input type="number" id="manual-token-id" min="0" placeholder="رقم التذكرة (Token ID)" required />
+        <button type="submit">تحقق وسجّل الدخول</button>
+      </form>
+    </section>
+
+    <!-- ===== صفحة وسيطة: تنفيذ العملية ===== -->
+    <section id="view-processing" class="view hidden card processing-card">
+      <p class="eyebrow">جاري التنفيذ</p>
+      <h2 id="processing-title">يرجى الانتظار...</h2>
+      <ol id="processing-steps" class="steps"></ol>
+      <p class="processing-note">لا تغلق النافذة ولا ترفض المعاملة بميتاماسك</p>
+    </section>
+
+    <!-- ===== صفحة نهائية: نجاح العملية ===== -->
+    <section id="view-success" class="view hidden card success-card">
+      <div id="success-body"></div>
+    </section>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/wallet.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/chain-utils.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/tickets.js"></script>
+  <script src="js/resale.js"></script>
+  <script src="js/checkin.js"></script>
+</body>
+</html>

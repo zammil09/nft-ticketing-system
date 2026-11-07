@@ -1,0 +1,16 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Hardhat generated files
+artifacts/
+cache/
+
+# Other generated files
+coverage/
+.DS_Store
+.vercel/
